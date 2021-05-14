@@ -1,0 +1,516 @@
+<html>
+<!--********************************************************************
+'*
+'*  File:           ADComputersDescription.hta
+'*  Created:        october 2006
+'*  Version:        0.1.0
+'*  Author:         Andrey Grevtsov 
+'*                  http://andrey.grevtsov.ru
+'*
+'*  Description:    Приложение позволяет автоматизировать ввод описаний   
+'*                  компьютеров в Active Directory
+'*
+'*  Copyleft (C)     2006 Andrey Grevtsov
+'*
+'*  License:        GPL
+'*
+'********************************************************************-->
+<head>
+<meta http-equiv="MSThemeCompatible" content="yes">
+<title>ADComputersDescription - Ввод описаний к компьютерам в Active Directory</title>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<HTA:application
+  id="objADComputersDescription"
+  applicationname="ADComputersDescription"
+  borderstyle="normal"
+  caption="yes"
+  contextmenu="false"
+  icon="ADComputersDescription.ico"
+  maximizebutton="true"
+  minimizebutton="true"
+  navigable="false"
+  scroll="true"
+  selection="false"
+  showintaskbar="true"
+  singleinstance="true"
+  sysmenu="true"
+  version="0.1.0"
+  windowstate="normal"
+>
+<script type="text/vbscript">
+Public strDomain, UnitComp, CategoryComp, CategoryUser
+const ADS_SCOPE_SUBTREE = 2
+const HKEY_LOCAL_MACHINE = &H80000002 
+
+Function getComputerLastLogonUser(strComputer)
+  on error resume next
+  Logging "getComputerLastLogonUser("&strComputer&")"
+  Set objReg = GetObject("winmgmts:\\" & strComputer & "\root\default:StdRegProv")
+  If Err.Number = false then
+    strKeyPath = "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+    ValueName = "DefaultUserName"
+    objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath, ValueName, getComputerLastLogonUser
+  Else
+    getComputerLastLogonUser = ""
+  End If
+  Logging "getComputerLastLogonUser="&getComputerLastLogonUser
+End Function  
+
+Function getCommentFromComp(strComputer)
+  on error resume next
+  Logging "getCommentFromComp("&strComputer&")"
+  Set objReg = GetObject("winmgmts:\\" & strComputer & "\root\default:StdRegProv")
+  If Err.Number = false then
+    strKeyPath = "SYSTEM\ControlSet001\Services\lanmanserver\parameters"
+    ValueName = "srvcomment"
+    objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath, ValueName, getCommentFromComp
+  Else
+    getCommentFromComp = ""
+  End If
+  Logging "getCommentFromComp="&getComputerLastLogonUser
+End Function
+
+Function getUserDisplayName(strUser,strDomain)
+  Logging "getUserDisplayName(" &strUser & ","&strDomain&")"
+  Set objConnection = CreateObject("ADODB.Connection")
+  objConnection.Provider = "ADsDSOObject"
+  objConnection.Open "Active Directory Provider"
+  Set objCommandUser = CreateObject("ADODB.Command")
+  Set objCommandUser.ActiveConnection = objConnection
+  ' Предполагается, что в окне входа короткое имя пользователя
+  objCommandUser.CommandText = "<LDAP://" & strDomain & ">;(&(objectCategory=User)" & _
+  "(samAccountName=" & strUser & "));distinguishedName;subtree"
+  Set objRecordSetUser = objCommandUser.Execute
+  If objRecordsetUser.RecordCount = 0 Then
+    ' Предполагается, что в окне входа длиннное (через домен) имя пользователя
+    objCommandUser.CommandText = "<LDAP://" & strDomain & ">;(&(objectCategory=User)" & _
+    "(userPrincipalName=" & strUser & "));distinguishedName;subtree"
+    Set objRecordSetUser = objCommandUser.Execute
+  End If
+  If objRecordsetUser.RecordCount = 0 Then
+     getUserDisplayName = "не определено"
+  Else
+    objRecordSetUser.MoveFirst
+    Set objUser = GetObject("LDAP://" & objRecordSetUser.Fields("distinguishedName").Value)
+    objUser.GetInfo
+    getUserDisplayName = objUser.Get("name")
+  End If
+  Logging "getUserDisplayName="&getUserDisplayName
+End Function
+
+Function setComment2Computer(strComputer,strComment)
+  on error resume next
+  Logging "setComment2Computer("&strComputer&","&strComment&")"
+  If isPinged(strComputer) Then
+    Set objReg = GetObject("winmgmts:\\" & strComputer & "\root\default:StdRegProv")
+    strKeyPath = "SYSTEM\ControlSet001\Services\lanmanserver\parameters"
+    ValueName = "srvcomment"
+    objReg.SetStringValue HKEY_LOCAL_MACHINE, strKeyPath, ValueName, strComment
+    ' Перезапуск сервиса Сервера
+    Set objWMIService = GetObject("winmgmts:" _
+     & "{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
+    Set colServiceList = objWMIService.ExecQuery _
+     ("Select * from Win32_Service where Name='lanmanserver'")
+    For each objService in colServiceList
+      errReturn = objService.StopService()
+      errReturn = objService.StartService()
+    Next
+    If Err.Number=0 And errReturn = 0 Then
+      setComment2Computer = True
+    Else
+      setComment2Computer = False
+    End If
+  Else
+    setComment2Computer = False
+  End If
+  Logging("setComment2Computer=" & setComment2Computer)
+End Function
+
+Function setDescription2ADcomputer(strComputerDN,strDescription)
+  on error resume next
+  Logging "setDescription2ADcomputer("&strComputerDN&","&strDescription&")"
+  Set objComp = GetObject("LDAP://" & strComputerDN)  
+  If len(strDescription) > 0 Then objComp.Put "description", strDescription
+  objComp.SetInfo
+  If Err.Number=0 Then
+    setDescription2ADcomputer = True
+  Else
+    setDescription2ADcomputer = False
+  End If
+  Logging "setDescription2ADcomputer="&setDescription2ADcomputer
+End Function
+
+Function setLocation2ADcomputer(strComputerDN,strLocation)
+  on error resume next
+  Logging "setLocation2ADcomputer("&strComputerDN&","&strLocation&")"
+  Set objComp = GetObject("LDAP://" & strComputerDN)  
+  If len(strLocation) > 0 Then objComp.Put "location", strLocation
+  objComp.SetInfo
+  If Err.Number=0 Then
+    setLocation2ADcomputer = True
+  Else
+    setLocation2ADcomputer = False
+  End If
+  Logging "setLocation2ADcomputer="&setLocation2ADcomputer
+End Function
+
+Sub getComputersList()
+'  on error resume next
+  Set objRootDSE=GetObject("LDAP://RootDSE")
+  Set objDomain=GetObject("LDAP://" + objRootDSE.get("DefaultNamingContext"))
+  strDomain = objRootDse.Get("defaultNamingContext")
+  Set objConnection = CreateObject("ADODB.Connection")
+  objConnection.Provider = "ADsDSOObject"
+  objConnection.Open "Active Directory Provider"
+  Set objCommandComp = CreateObject("ADODB.Command")
+  Set objCommandComp.ActiveConnection = objConnection
+  sqlS = "Select distinguishedName,name,description,location from '" & objDomain.AdsPath & "'  Where objectclass='computer'"
+  objCommandComp.CommandText = sqlS 
+  objCommandComp.Properties("Page Size") = 1000
+  objCommandComp.Properties("Timeout") = 30
+  objCommandComp.Properties("Searchscope") = ADS_SCOPE_SUBTREE
+  objCommandComp.Properties("Cache Results") = False
+  Set objRecordSet = objCommandComp.Execute
+  objRecordSet.MoveFirst
+  j=1
+  Set objOutput = document.getElementById("output")
+  out1 = "<table>"
+  out1 = out1&"<tr class='thead'>"
+  out1 = out1&"<td class='name'>Имя компьютера</td>"
+  out1 = out1&"<td class='DN'>distiguishedName</td>"
+  out1 = out1&"<td class='description'>Описание в Active Directory</td>"
+  out1 = out1&"<td class='comment'>Комментарий в сети Microsoft</td>"
+  out1 = out1&"<td class='registry'>Параметр реестра</td>"  
+  out1 = out1&"<td class='user'>Кто работает</td>"
+  out1 = out1&"<td class='change'></td>"
+  out1 = out1&"<td class='newdescription'>Новое описание</td>"
+  out1 = out1&"<td class='net_socket'>Сетевая розетка</td>"
+  out1 = out1&"<td class='ip'>IP</td></tr>"
+  Do Until objRecordSet.EOF 'Or j=11
+    strNameComp = objRecordSet.Fields("name").Value
+    varDescriptionComp = ""
+    strDescriptionComp = ""
+    strLocation = ""
+    varDescriptionComp = objRecordSet.Fields("description").Value
+    If isArray(varDescriptionComp) Then
+      strDescriptionComp = varDescriptionComp(0)
+    End If
+    strLocation = objRecordSet.Fields("location").Value
+    strDNComp = objRecordSet.Fields("distinguishedName").Value
+    out1=out1&"<tr class='computer'><td class='name'>" & strNameComp& "</td>"
+    out1=out1&"<td class='DN'>" & strDNComp & "</td>"
+    out1=out1&"<td class='description'>" & strDescriptionComp& "</td>"
+    out1=out1&"<td class='comment' id='comment_"&strNameComp&"'></td>"
+    out1=out1&"<td class='registry' id='registry_"&strNameComp&"'></td>"    
+    out1=out1&"<td class='user'></td>"
+    out1=out1&"<td class='change'><input type='checkbox' name='cb_"&strNameComp&"' /></td>"
+    out1=out1&"<td class='newdescription'><input type='text' name='description_"&strNameComp&"' onkeyup='javascript:set2Change(this)' /></td>"
+    out1=out1&"<td class='newlocation'><input type='text' name='location_"&strNameComp&"' value='"&strLocation&"' onkeyup='javascript:set2Change(this)' /></td>"
+    out1=out1&"<td class='ip'></td></tr>" &vbcr
+    objRecordSet.MoveNext
+    j=j+1
+  Loop
+  objOutput.innerHtml = out1&"</table>" 
+  Logging "Получен список компьютеров с контроллера домена: "& CSTR(j-1)
+End Sub
+
+Sub Logging (message)
+  Set objLog = document.getElementById("log")
+  objLog.style.display = "block"
+  LogFile = ".\ADComputersDescription.log"
+  Set objFSO = CreateObject("Scripting.FileSystemObject")
+  Set objLogFile = objFSO.OpenTextFile(LogFile, 8, True)
+  objLogFile.WriteLine(Date & " " & Time & "   " & message)
+  objLogFile.Close
+  objLog.value = objLog.value +  message+ vbcr 
+End Sub
+
+Function XPisPinged (strComputerName)
+Logging ("Пингую "&strComputerName)
+  Set objPing = GetObject("winmgmts:{impersonationLevel=impersonate}").ExecQuery("select * from Win32_PingStatus where address = '"& strComputerName & "'")
+  For Each objStatus in objPing
+    If IsNull(objStatus.StatusCode) or objStatus.StatusCode<>0 Then
+      isPinged = False
+    Else
+      isPinged = True  
+    End If
+  Next
+End Function
+
+Function isPinged (strComputer)
+  Logging ("Пингую "&strComputer)
+  Const ForReading = 1
+  Const TemporaryFolder = 2
+  Const WshHide = 0
+  isPinged = False
+  quot = chr(34)
+  Set objShell = CreateObject("Wscript.Shell")
+  Set objFs = CreateObject("Scripting.FileSystemObject")
+'  strTempFile = objFs.BuildPath(objFs.GetSpecialFolder(TemporaryFolder).Path, objFs.GetTempName)
+  strTempFile = ".\ping.txt"
+  shellCommand = "cmd.exe /c ping "&strComputer&" -n 1 > "& quot & strTempFile & quot
+  logging shellCommand
+  objShell.Run shellCommand, WshHide, True
+  Set objFile = objFs.OpenTextFile(strTempFile, ForReading, True)
+  Do Until objFile.AtEndOfStream
+    strLine = objFile.ReadLine
+    If InStr(strLine, "Ї®вҐап­® = 0") > 0 Then ' "потеряно = 0" 
+      isPinged = True
+    End If
+  Loop
+End Function
+
+Sub getUsersFromComps()
+  Set objOutput = document.getElementById("output")
+  For Each tr In objOutput.children(0).children(0).children ' По каждой строке таблице
+  strComputer = tr.children(0).innerHTML
+    If strComputer <>"Имя компьютера" Then
+       If isPinged (strComputer) Then
+        user = getComputerLastLogonUser(strComputer)
+        tr.children(4).innerHTML = getCommentFromComp(tr.children(0).innerHTML)
+        If user <>"" Then
+          tr.children(5).innerHTML = getUserDisplayName(user,strDomain)
+        Else
+          tr.children(5).innerHTML = "не определено"
+        End If
+      Else
+        tr.children(4).innerHTML = "недоступен"
+        tr.children(5).innerHTML = "недоступен"
+      End If
+      t = window.setTimeout("Logging",10000,"Получение данных с "&tr.children(0).innerHTML)
+      tr.children(7).children(0).value = tr.children(5).innerHTML
+      If (tr.children(2).innerHTML <> tr.children(5).innerHTML) AND (tr.children(5).innerHTML<>"недоступен") Then
+        tr.children(6).children(0).checked="true"
+        tr.children(7).children(0).style.backgroundColor="yellow"
+      Else 
+        tr.children(7).children(0).value=tr.children(2).innerHTML
+      End If  
+      If (tr.children(5).innerHTML = "не определено") Then 
+        tr.children(7).children(0).value = ""
+        tr.children(6).children(0).checked=false
+      End If
+    tr.children(9).innerHTML = getIp(strComputer)
+    End If
+    Logging(tr.children(0).innerHTML&"="&tr.children(5).innerHTML)
+  Next 
+End Sub
+
+Sub saveSelect ()
+  Set objOutput = document.getElementById("output")
+  Logging("saveSelect")
+  For Each tr In objOutput.children(0).children(0).children
+  If tr.children(0).innerHTML <>"Имя компьютера" Then  
+    If tr.children(6).children(0).checked=TRUE Then
+      Logging("TRUE")
+      strComputerName = tr.children(0).innerHTML
+      strComputerDn = tr.children(1).innerHTML
+      strDescription = tr.children(2).innerHTML 
+      strUser = tr.children(5).innerHTML
+      strComment = tr.children(4).innerHTML
+      strNewDescription = tr.children(7).children(0).value
+      strLocation = tr.children(8).children(0).value
+      Logging(strComputerName&"="&strNewDescription)
+      If tr.children(7).children(0).style.backgroundColor="yellow" AND strNewDescription <> "" Then
+      ' Изменение описания в AD
+        If setDescription2ADcomputer(strComputerDN,strNewDescription) Then
+          tr.children(2).innerHTML = strNewDescription
+          tr.children(7).children(0).style.backgroundColor="white"
+          tr.children(6).children(0).checked=false
+          Logging "saveSelect(Описание и размещениев AD)=Done"
+        End If
+      End If
+      If tr.children(8).children(0).style.backgroundColor="yellow" Then 
+      ' Изменение размещения
+        If setLocation2ADcomputer(strComputerDN,strLocation) Then
+          tr.children(8).children(0).style.backgroundColor="white"
+          tr.children(6).children(0).checked=false
+        End If        
+      End If
+      If strNewDescription <> strComment AND strNewDescription <> ""  Then 
+      ' Изменение комментария в сети 
+        If setComment2Computer(strComputerName,strNewDescription) Then
+          tr.children(4).innerHTML = strNewDescription
+          tr.children(6).children(0).checked=false
+          tr.children(7).children(0).style.backgroundColor="white"
+          Logging "saveSelect(Комментарий)=Done"
+        End If
+      End If     
+     End If
+   End If     
+  Next
+End Sub
+
+Sub getNetviewList()
+  Logging "getNetviewList"
+  Const ForReading = 1
+  Const TemporaryFolder = 2
+  Const WshHide = 0
+  quot = chr(34)
+  Set objShell = CreateObject("Wscript.Shell")
+  Set objFs = CreateObject("Scripting.FileSystemObject")
+'  strTempFile = objFs.BuildPath(objFs.GetSpecialFolder(TemporaryFolder).Path, objFs.GetTempName)
+  strTempFile = ".\1.txt"
+  objShell.Run "cmd.exe /c net view > "& quot & strTempFile & quot, WshHide, True
+  Set objFile = objFs.OpenTextFile(strTempFile, ForReading, True)
+  Do Until objFile.AtEndOfStream
+    strLine = objFile.ReadLine
+    If InStr(strLine, "\\") = 1 Then
+      strComputer = RTrim(dos2win(mid(strLine,3,21)))
+      strComment = RTrim(dos2win(mid(strLine,24,len(strLine))))
+      Set objComment = document.getElementById("comment_"&strComputer)
+      If TypeName(objComment)<>"Nothing" Then
+        objComment.innerHTML = strComment
+        Logging strComputer&"="&strComment
+        Set tr = objComment.ParentNode 
+        If tr.children(0).innerHTML <>"Имя компьютера" Then
+          If (tr.children(2).innerHTML <> tr.children(3).innerHTML) Then
+            tr.children(7).children(0).style.backgroundColor="yellow"
+          End If  
+        End If        
+        Set objComment = Nothing
+      End If
+    End If
+  Loop
+  Logging "getNetviewList finished"
+End Sub
+Function dos2win(strText)
+  strDos="ЂЃ‚ѓ„…р†‡€‰Љ‹ЊЌЋЏђ‘’“”•–—™љ›њќћџ ЎўЈ¤Ґс¦§Ё©Є«¬­®Їабвгдежзийклмноп"
+  strWin="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+  For i=1 To len(strText)
+    letterDos = mid(strText,i,1)
+    n = InStr(strDos,letterDos)
+    If  n > 0 Then
+      letterWin = mid(strWin,n,1)
+      dos2win = dos2win&letterWin 
+    Else
+      dos2win = dos2win&letterDos
+    End If
+  Next
+End Function
+
+Function getIp(strComputer)
+  on error resume next
+  getIp = ""
+  Set objWMIService = GetObject("winmgmts:" _
+    & "{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
+
+  Set IPConfigSet = objWMIService.ExecQuery _
+    ("Select * from Win32_NetworkAdapterConfiguration Where IPEnabled=TRUE")
+ 
+  For Each IPConfig in IPConfigSet
+    If Not IsNull(IPConfig.IPAddress) Then 
+        For i=LBound(IPConfig.IPAddress) to UBound(IPConfig.IPAddress)
+            getIp=getIp & IPConfig.IPAddress(i)
+        Next
+    End If
+  Next
+End Function
+
+
+</script>
+<script type="text/javascript">
+function set2Change(objInput) {
+  objInput.style.backgroundColor='yellow'
+  objInput.parentNode.parentNode.children(6).children(0).checked=true
+}
+</script>
+<style>
+body {
+  font-size:14px;
+  font-family: MS Sans Serif, Arial;
+}
+td {
+  padding: 0px 3px 0px 3px;
+}
+.computer {
+  font-family: MS Sans Serif, Arial;
+  font-size: 10px;
+  margin:0;
+  padding:0;
+  background-color: silver;
+}
+.thead {
+  font-family: MS Sans Serif, Arial;
+  font-size: 10px;
+  margin:0;
+  padding:0;
+  background-color: silver;
+  font-weight: bold;
+  height: 20px;
+  text-align: center;
+}
+.name {
+  width: 120px;
+}
+.dn {
+  display:none;
+}
+#output {
+  margin: 0 0 0 0;
+  padding:0px;
+  clear:both;
+}
+#log {
+  clear:both;
+  width:100%;
+  height: 500px;
+  display:none;
+}
+.newdescription input, .newlocation input, .change input{
+  border: solid 0px Gray;
+  border-style:thin; 
+  font-size:10px;
+  font-family: MS Sans Serif, Arial;
+  margin:0;
+}
+.change input{
+  background-color:gray;
+  padding:0;
+  width:14px;
+  height:14px;
+}
+.attention {
+  color: red;
+  font-style: italic;
+  font-family: Times New Roman;
+}
+</style>
+</head>
+<body>
+<h1>Ввод описаний и размещения компьютеров</h1>
+<ol>
+  <li>Получить список компьютеров, их описание и размещение из Active Directory. Нажмите <br />
+    <input type="button" value="Получить данные из Active Directory" onclick="vbscript:getComputersList">
+  <div id="output"></div>
+  </li>
+  <li>Получить описания компьютеров, отображаемые в сетевом обозрении. Нажмите <br />
+    <input type="button" value="Получить описания из обозревателя сети" onclick="vbscript:getNetViewList"><br />
+    Данные отражают текущее состояние списка компьютеров на обозревателе сети, 
+    в реестре компьютера может быть указано другое описание, которое появится 
+    только после перезагрузки. 
+  </li>
+  <li>Получить данные о пользователях, использующих указанные выше компьютеры. 
+    Нажмите <br />
+    <input type="button" value="Получить данные с компьютеров" onclick="vbscript:getUsersFromComps"><br />
+    <span class="attention">В процессе выполнения будут опрошены все компьютеры из списка.
+    Получение данных с каждого потребует времени, в течение которого программа 
+    будет выглядеть зависшей. 
+    Программой пишется журнал работы, который можно просмотреть и понять, 
+    какую операцию в данный момент выполняет программа.</span>
+  </li>
+  <li>Выполнить корректировку данных в столбцах таблицы. Ввести описание для каждого компьютера 
+    соответственно имени ответственного пользователя. Ввести номер сетевой розетки,
+    к которой подключен компьютер в формате &quot;кабинет.розетка&quot;, например: <b>320.1к</b>
+    <span class="attention">Обратите внимание - для изменяемых записей чекбоксы 
+    должны быть отмечены галочкой. Для сервера в качестве описания вводится 
+    основная его функция, например <b>Контроллер домена</b></span></li>
+  <li>Сохранить изменения в Active Directory и в реестрах компьютеров. Нажмите<br />
+    <input type="button" value="Записать данные" onclick="vbscript:saveSelect"><br />
+    <span class="attention">Выполнение операции может потребовать некоторого времени, в зависимости от того, 
+    сколько записей отмечено для изменения.</span>
+  </li>
+</ol>
+<textarea id="log">
+</textarea>
+</body>
+</html>

@@ -1,0 +1,301 @@
+<html>
+<!--********************************************************************
+'*
+'*  File:           ADOldLogins.hta
+'*  Created:        october 2006
+'*  Version:        0.1.0
+'*  Author:         Andrey Grevtsov 
+'*                  http://andrey.grevtsov.ru
+'*
+'*  Description:    Приложение позволяет упростить удаление   
+'*                  устаревших учётных записей компьютеров из
+'*                  Active Directory
+'*  Copyleft (C)    2006 Andrey Grevtsov
+'*
+'*  License:        GPL
+'*
+'********************************************************************-->
+<head>
+<meta http-equiv="MSThemeCompatible" content="yes">
+<title>ADOldLogins - Удаление устаревших учётных записей компьютеров из Active Directory</title>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<HTA:application
+  id="objADOldLogins"
+  applicationname="ADOldLogins"
+  borderstyle="normal"
+  caption="yes"
+  contextmenu="false"
+  icon="ADOldLogins.ico"
+  maximizebutton="true"
+  minimizebutton="true"
+  navigable="false"
+  scroll="true"
+  selection="false"
+  showintaskbar="true"
+  singleinstance="true"
+  sysmenu="true"
+  version="0.1.0"
+  windowstate="normal"
+>
+<script type="text/vbscript">
+Public strDomain, UnitComp, CategoryComp, CategoryUser
+const ADS_SCOPE_SUBTREE = 2
+const HKEY_LOCAL_MACHINE = &H80000002 
+
+Function deleteADcomputer(strComputerDN)
+  on error resume next
+  Logging "deleteADcomputer("&strComputerDN&")"
+  Set objComp = GetObject("LDAP://" & strComputerDN)  
+  objComp.DeleteObject (0)
+  If Err.Number=0 Then
+    deleteADcomputer = True
+  Else
+    deleteADcomputer = False
+  End If
+  Logging "deleteADcomputer="&deleteADcomputer
+End Function
+
+Sub getComputersList()
+'  on error resume next
+  Set objRootDSE=GetObject("LDAP://RootDSE")
+  Set objDomain=GetObject("LDAP://" + objRootDSE.get("DefaultNamingContext"))
+  strDomain = objRootDse.Get("defaultNamingContext")
+  Set objConnection = CreateObject("ADODB.Connection")
+  objConnection.Provider = "ADsDSOObject"
+  objConnection.Open "Active Directory Provider"
+  Set objCommandComp = CreateObject("ADODB.Command")
+  Set objCommandComp.ActiveConnection = objConnection
+  sqlS = "Select distinguishedName,name,description,location,accountExpires,createTimeStamp,lastLogon,logonCount,modifyTimeStamp,pwdLastSet,whenChanged,whenCreated from '" & objDomain.AdsPath & "'  Where objectclass='computer'"
+  objCommandComp.CommandText = sqlS 
+  objCommandComp.Properties("Page Size") = 1000
+  objCommandComp.Properties("Timeout") = 30
+  objCommandComp.Properties("Searchscope") = ADS_SCOPE_SUBTREE
+  objCommandComp.Properties("Cache Results") = False
+  Set objRecordSet = objCommandComp.Execute
+  objRecordSet.MoveFirst
+  j=1
+  Set objOutput = document.getElementById("output")
+  out1 = "<table>"
+  out1 = out1&"<tr class='thead'>"
+  out1 = out1&"<td class='check'></td>"
+  out1 = out1&"<td class='name'>Имя компьютера</td>"
+  out1 = out1&"<td class='DN'>distiguishedName</td>"
+  out1 = out1&"<td class='description'>Описание компьютера в AD</td>"
+  out1 = out1&"<td class='createtime'>Дата создания учётной записи</td>"
+  out1 = out1&"<td class='lastlogon'>Дата последнего подключения к домену</td>" 
+  out1=out1&"<td class='location'>Размещение</td>"   
+  out1=out1&"</tr>" &vbcr
+  Do Until objRecordSet.EOF
+    strNameComp = objRecordSet.Fields("name").Value
+    varDescriptionComp = ""
+    strDescriptionComp = ""
+    strLocation = ""
+    varDescriptionComp = objRecordSet.Fields("description").Value
+    If isArray(varDescriptionComp) Then
+      strDescriptionComp = varDescriptionComp(0)
+    End If
+    strLocation = objRecordSet.Fields("location").Value
+    strDNComp = objRecordSet.Fields("distinguishedName").Value
+    strCreateTimeStamp = convertGMT2MSK(objRecordSet.Fields("createTimeStamp").Value)
+    strLastLogon = convertLargeInteger2Date(objRecordSet.Fields("lastLogon").Value)
+'    strLogonCount = CStr(objRecordSet.Fields("logonCount").Value)
+'    strModifyTimeStamp = convertGMT2MSK(objRecordSet.Fields("modifyTimeStamp").Value)
+'    strPwdLastSet = convertGMT2MSK(convertLargeInteger2Date(objRecordSet.Fields("pwdLastSet").Value))
+'    strWhenChanged = convertGMT2MSK(objRecordSet.Fields("whenChanged").Value)
+'    strWhenCreated = convertGMT2MSK(objRecordSet.Fields("whenCreated").Value)
+'    strAccountExpires = convertLargeInteger2Date(objRecordSet.Fields("accountExpires").Value)
+'  Logging strDNComp&" {} "&strCreateTimeStamp& "{}"&strLastLogon
+    If isMoreDayNotLogon(strLastLogon,60) Then
+      strClassLastLogon = "lastlogon2"
+      strCheck = " checked"
+    Else
+      strClassLastLogon = "lastlogon"
+      strCheck = ""
+    End If
+'      Logging(strClassLastLogon)    
+    out1=out1&"<tr class='computer'>"
+    out1 = out1&"<td class='check'><input type='checkbox'" & strCheck & " /></td>"
+    out1=out1&"<td class='name'>" & strNameComp& "</td>"
+    out1=out1&"<td class='DN'>" & strDNComp & "</td>"
+    out1=out1&"<td class='description'>" & strDescriptionComp& "</td>"
+    out1=out1&"<td class='createtime'>"&strCreateTimeStamp&"</td>"
+    out1=out1&"<td class='"&strClassLastLogon&"'>"&strLastLogon&"</td>"
+    out1=out1&"<td class='location'>"&strLocation&"</td>"     
+    out1=out1&"</tr>" &vbcr
+    objRecordSet.MoveNext
+    j=j+1
+  Loop
+  objOutput.innerHtml = out1&"</table>" 
+  Logging "Получен список компьютеров с контроллера домена: "& CStr(j-1)
+'  Logging(objOutput.innerHTML)
+End Sub
+
+Sub Logging (message)
+  Set objLog = document.getElementById("log")
+  objLog.style.display = "block"
+'  LogFile = ".\ADOldLogins.log"
+'  Set objFSO = CreateObject("Scripting.FileSystemObject")
+'  Set objLogFile = objFSO.OpenTextFile(LogFile, 8, True)
+'  objLogFile.WriteLine(Date & " " & Time & "   " & message)
+'  objLogFile.Close
+  objLog.value = objLog.value +  message+ vbcr 
+End Sub
+
+Sub applyChanges()
+  Set objOutput = document.getElementById("output")
+  Logging("applyChanges")
+  intSuccessNum = 0
+  intFailureNum = 0
+  For Each tr In objOutput.children(0).children(0).children
+  If tr.children(1).innerHTML <>"Имя компьютера" AND len(tr.children(0).innerHTML)>3Then  
+    If tr.children(0).children(0).checked=TRUE Then
+'      Logging("TRUE")
+      strComputerName = tr.children(1).innerHTML
+      strComputerDn = tr.children(2).innerHTML
+      If deleteADcomputer(strComputerDN) Then
+        tr.children(0).innerHTML=""
+'        tr.children(1).innerHTML=""
+'        tr.children(2).innerHTML=""
+        tr.children(3).innerHTML="<i>Запись удалена</i>"
+        tr.children(4).innerHTML=""
+        tr.children(5).innerHTML=""
+        tr.children(6).innerHTML=""
+        Logging "Успешно удалёна учётная запись компьютера: " &strComputerName&" ("&strComputerDn&")"
+        intSuccessNum = intSuccessNum+1 
+      Else
+        Logging "Не удалось удалить учётную запись компьютера: " &strComputerName&" ("&strComputerDn&")"
+        intFailureNum = intFailureNum+1      
+      End If
+    End If
+  End If
+  Next
+  Logging "Удалено: " & CStr(intSuccessNum) & ". " & "Не удалось удалить: " & CStr(intFailureNum) & "."
+End Sub
+
+Function convertLargeInteger2Date(objLastLogon)
+' В AD время последнего входа в систему хранится в виде объеста LargeInteger
+' в наносекундах с  01/01/1601
+  If isObject(objLastLogon) Then
+    intLastLogonTime = objLastLogon.HighPart * (2^32) + objLastLogon.LowPart 
+    intLastLogonTime = intLastLogonTime / (60 * 10000000)
+    intLastLogonTime = intLastLogonTime / 1440
+  Else
+    intLastLogonTime = 0
+  End If
+  convertLargeInteger2Date = intLastLogonTime + #1/1/1601#
+End Function 
+
+Function convertGMT2MSK(strDateTime)
+  theDate = DateValue(strDateTime)
+  theTime = TimeValue(TimeValue(strDateTime) + #04:00:00#)
+  If DatePart("h", theTime)<4 Then theDate = theDate + 1
+  convertGMT2MSK = theDate & " " & theTime
+End Function
+
+Function isMoreMonthNotLogon (strDateTime,intMonth)
+'  Logging "Сегодня:" &DateValue(Now)
+'  Logging "Последний вход:" & DateValue(strDateTime)
+'  Logging "Разница в месяцах: "&DateDiff("m",DateValue(strDateTime),Now)
+'  Logging("Допустимо:"&CStr(intMonth))
+  If Abs(DateDiff("m",Now,DateValue(strDateTime))) > intMonth Then 
+    isMoreMonthNotLogon = True
+      Logging("True")
+  Else
+    isMoreMonthNotLogon = False
+    Logging("False")
+  End If
+End Function
+Function isMoreDayNotLogon (strDateTime,intDay)
+  If Abs(DateDiff("d",Now,DateValue(strDateTime))) > intDay Then 
+    isMoreDayNotLogon = True
+'      Logging("True")
+  Else
+    isMoreDayNotLogon = False
+'    Logging("False")
+  End If
+End Function
+
+</script>
+<script type="text/javascript">
+function set2Change(objInput) {
+  objInput.style.backgroundColor='yellow'
+  objInput.parentNode.parentNode.children(6).children(0).checked=true
+}
+</script>
+<style>
+body {
+  font-size:14px;
+  font-family: MS Sans Serif, Arial;
+}
+td {
+  padding: 0px 3px 0px 3px;
+}
+.computer {
+  font-family: MS Sans Serif, Arial;
+  font-size: 10px;
+  margin:0;
+  padding:0;
+  background-color: silver;
+}
+.thead {
+  font-family: MS Sans Serif, Arial;
+  font-size: 10px;
+  margin:0;
+  padding:0;
+  background-color: silver;
+  font-weight: bold;
+  height: 20px;
+  text-align: center;
+}
+.name .location .description .createtime .lastlogon{
+  color: black;
+}
+.lastlogon2 {
+  color: red;
+}
+.dn {
+  display:none;
+}
+#output {
+  margin: 0 0 0 0;
+  padding:0px;
+  clear:both;
+}
+#log {
+  clear:both;
+  width:100%;
+  height: 500px;
+  display:none;
+}
+.check input{
+  margin:0;
+  padding:0;
+  width:14px;
+  height:14px;
+}
+.attention {
+  color: red;
+  font-style: italic;
+  font-family: Times New Roman;
+}
+</style>
+</head>
+<body>
+<h1>Удаление устаревших учётных записей компьютеров</h1>
+<ol>
+  <li>Получить список компьютеров, их описание, размещение и дату последнего 
+    входа в Active Directory. Автоматически помечаются для удаления записи 
+    компьютеров, которые не подключались к домену более 60 дней. Нажмите <br />
+    <input type="button" value="Получить данные из Active Directory" onclick="vbscript:getComputersList">
+  <div id="output"></div>
+  </li>
+  <li>Удалить выделенные компьютеры из Active Directory. Нажмите<br />
+    <input type="button" value="УДАЛИТЬ выделенные" onclick="vbscript:applyChanges"><br />
+    <span class="attention">Операция необратима! Будьте уверены, что удаляется 
+    неиспользуемая учётная запись.</span>
+  </li>
+</ol>
+<textarea id="log">
+</textarea>
+</body>
+</html>

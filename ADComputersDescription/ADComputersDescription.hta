@@ -7,8 +7,8 @@
 '*  Author:         Andrey Grevtsov 
 '*                  http://andrey.grevtsov.ru
 '*
-'*  Description:    Приложение позволяет автоматизировать ввод описаний   
-'*                  компьютеров в Active Directory
+'*  Description:    РџСЂРёР»РѕР¶РµРЅРёРµ РїРѕР·РІРѕР»СЏРµС‚ Р°РІС‚РѕРјР°С‚РёР·РёСЂРѕРІР°С‚СЊ РІРІРѕРґ РѕРїРёСЃР°РЅРёР№   
+'*                  РєРѕРјРїСЊСЋС‚РµСЂРѕРІ РІ Active Directory
 '*
 '*  Copyleft (C)     2006 Andrey Grevtsov
 '*
@@ -17,8 +17,8 @@
 '********************************************************************-->
 <head>
 <meta http-equiv="MSThemeCompatible" content="yes">
-<title>ADComputersDescription - Ввод описаний к компьютерам в Active Directory</title>
-<meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<title>ADComputersDescription - Р’РІРѕРґ РѕРїРёСЃР°РЅРёР№ Рє РєРѕРјРїСЊСЋС‚РµСЂР°Рј РІ Active Directory</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <HTA:application
   id="objADComputersDescription"
   applicationname="ADComputersDescription"
@@ -77,18 +77,18 @@ Function getUserDisplayName(strUser,strDomain)
   objConnection.Open "Active Directory Provider"
   Set objCommandUser = CreateObject("ADODB.Command")
   Set objCommandUser.ActiveConnection = objConnection
-  ' Предполагается, что в окне входа короткое имя пользователя
+  ' РџСЂРµРґРїРѕР»Р°РіР°РµС‚СЃСЏ, С‡С‚Рѕ РІ РѕРєРЅРµ РІС…РѕРґР° РєРѕСЂРѕС‚РєРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
   objCommandUser.CommandText = "<LDAP://" & strDomain & ">;(&(objectCategory=User)" & _
   "(samAccountName=" & strUser & "));distinguishedName;subtree"
   Set objRecordSetUser = objCommandUser.Execute
   If objRecordsetUser.RecordCount = 0 Then
-    ' Предполагается, что в окне входа длиннное (через домен) имя пользователя
+    ' РџСЂРµРґРїРѕР»Р°РіР°РµС‚СЃСЏ, С‡С‚Рѕ РІ РѕРєРЅРµ РІС…РѕРґР° РґР»РёРЅРЅРЅРѕРµ (С‡РµСЂРµР· РґРѕРјРµРЅ) РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
     objCommandUser.CommandText = "<LDAP://" & strDomain & ">;(&(objectCategory=User)" & _
     "(userPrincipalName=" & strUser & "));distinguishedName;subtree"
     Set objRecordSetUser = objCommandUser.Execute
   End If
   If objRecordsetUser.RecordCount = 0 Then
-     getUserDisplayName = "не определено"
+     getUserDisplayName = "РЅРµ РѕРїСЂРµРґРµР»РµРЅРѕ"
   Else
     objRecordSetUser.MoveFirst
     Set objUser = GetObject("LDAP://" & objRecordSetUser.Fields("distinguishedName").Value)
@@ -106,7 +106,7 @@ Function setComment2Computer(strComputer,strComment)
     strKeyPath = "SYSTEM\ControlSet001\Services\lanmanserver\parameters"
     ValueName = "srvcomment"
     objReg.SetStringValue HKEY_LOCAL_MACHINE, strKeyPath, ValueName, strComment
-    ' Перезапуск сервиса Сервера
+    ' РџРµСЂРµР·Р°РїСѓСЃРє СЃРµСЂРІРёСЃР° РЎРµСЂРІРµСЂР°
     Set objWMIService = GetObject("winmgmts:" _
      & "{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
     Set colServiceList = objWMIService.ExecQuery _
@@ -176,15 +176,15 @@ Sub getComputersList()
   Set objOutput = document.getElementById("output")
   out1 = "<table>"
   out1 = out1&"<tr class='thead'>"
-  out1 = out1&"<td class='name'>Имя компьютера</td>"
+  out1 = out1&"<td class='name'>РРјСЏ РєРѕРјРїСЊСЋС‚РµСЂР°</td>"
   out1 = out1&"<td class='DN'>distiguishedName</td>"
-  out1 = out1&"<td class='description'>Описание в Active Directory</td>"
-  out1 = out1&"<td class='comment'>Комментарий в сети Microsoft</td>"
-  out1 = out1&"<td class='registry'>Параметр реестра</td>"  
-  out1 = out1&"<td class='user'>Кто работает</td>"
+  out1 = out1&"<td class='description'>РћРїРёСЃР°РЅРёРµ РІ Active Directory</td>"
+  out1 = out1&"<td class='comment'>РљРѕРјРјРµРЅС‚Р°СЂРёР№ РІ СЃРµС‚Рё Microsoft</td>"
+  out1 = out1&"<td class='registry'>РџР°СЂР°РјРµС‚СЂ СЂРµРµСЃС‚СЂР°</td>"  
+  out1 = out1&"<td class='user'>РљС‚Рѕ СЂР°Р±РѕС‚Р°РµС‚</td>"
   out1 = out1&"<td class='change'></td>"
-  out1 = out1&"<td class='newdescription'>Новое описание</td>"
-  out1 = out1&"<td class='net_socket'>Сетевая розетка</td>"
+  out1 = out1&"<td class='newdescription'>РќРѕРІРѕРµ РѕРїРёСЃР°РЅРёРµ</td>"
+  out1 = out1&"<td class='net_socket'>РЎРµС‚РµРІР°СЏ СЂРѕР·РµС‚РєР°</td>"
   out1 = out1&"<td class='ip'>IP</td></tr>"
   Do Until objRecordSet.EOF 'Or j=11
     strNameComp = objRecordSet.Fields("name").Value
@@ -211,7 +211,7 @@ Sub getComputersList()
     j=j+1
   Loop
   objOutput.innerHtml = out1&"</table>" 
-  Logging "Получен список компьютеров с контроллера домена: "& CSTR(j-1)
+  Logging "РџРѕР»СѓС‡РµРЅ СЃРїРёСЃРѕРє РєРѕРјРїСЊСЋС‚РµСЂРѕРІ СЃ РєРѕРЅС‚СЂРѕР»Р»РµСЂР° РґРѕРјРµРЅР°: "& CSTR(j-1)
 End Sub
 
 Sub Logging (message)
@@ -226,7 +226,7 @@ Sub Logging (message)
 End Sub
 
 Function XPisPinged (strComputerName)
-Logging ("Пингую "&strComputerName)
+Logging ("РџРёРЅРіСѓСЋ "&strComputerName)
   Set objPing = GetObject("winmgmts:{impersonationLevel=impersonate}").ExecQuery("select * from Win32_PingStatus where address = '"& strComputerName & "'")
   For Each objStatus in objPing
     If IsNull(objStatus.StatusCode) or objStatus.StatusCode<>0 Then
@@ -238,7 +238,7 @@ Logging ("Пингую "&strComputerName)
 End Function
 
 Function isPinged (strComputer)
-  Logging ("Пингую "&strComputer)
+  Logging ("РџРёРЅРіСѓСЋ "&strComputer)
   Const ForReading = 1
   Const TemporaryFolder = 2
   Const WshHide = 0
@@ -254,7 +254,7 @@ Function isPinged (strComputer)
   Set objFile = objFs.OpenTextFile(strTempFile, ForReading, True)
   Do Until objFile.AtEndOfStream
     strLine = objFile.ReadLine
-    If InStr(strLine, "Ї®вҐап­® = 0") > 0 Then ' "потеряно = 0" 
+    If InStr(strLine, "Р‡В®РІТђР°РїВ­В® = 0") > 0 Then ' "РїРѕС‚РµСЂСЏРЅРѕ = 0" 
       isPinged = True
     End If
   Loop
@@ -262,30 +262,30 @@ End Function
 
 Sub getUsersFromComps()
   Set objOutput = document.getElementById("output")
-  For Each tr In objOutput.children(0).children(0).children ' По каждой строке таблице
+  For Each tr In objOutput.children(0).children(0).children ' РџРѕ РєР°Р¶РґРѕР№ СЃС‚СЂРѕРєРµ С‚Р°Р±Р»РёС†Рµ
   strComputer = tr.children(0).innerHTML
-    If strComputer <>"Имя компьютера" Then
+    If strComputer <>"РРјСЏ РєРѕРјРїСЊСЋС‚РµСЂР°" Then
        If isPinged (strComputer) Then
         user = getComputerLastLogonUser(strComputer)
         tr.children(4).innerHTML = getCommentFromComp(tr.children(0).innerHTML)
         If user <>"" Then
           tr.children(5).innerHTML = getUserDisplayName(user,strDomain)
         Else
-          tr.children(5).innerHTML = "не определено"
+          tr.children(5).innerHTML = "РЅРµ РѕРїСЂРµРґРµР»РµРЅРѕ"
         End If
       Else
-        tr.children(4).innerHTML = "недоступен"
-        tr.children(5).innerHTML = "недоступен"
+        tr.children(4).innerHTML = "РЅРµРґРѕСЃС‚СѓРїРµРЅ"
+        tr.children(5).innerHTML = "РЅРµРґРѕСЃС‚СѓРїРµРЅ"
       End If
-      t = window.setTimeout("Logging",10000,"Получение данных с "&tr.children(0).innerHTML)
+      t = window.setTimeout("Logging",10000,"РџРѕР»СѓС‡РµРЅРёРµ РґР°РЅРЅС‹С… СЃ "&tr.children(0).innerHTML)
       tr.children(7).children(0).value = tr.children(5).innerHTML
-      If (tr.children(2).innerHTML <> tr.children(5).innerHTML) AND (tr.children(5).innerHTML<>"недоступен") Then
+      If (tr.children(2).innerHTML <> tr.children(5).innerHTML) AND (tr.children(5).innerHTML<>"РЅРµРґРѕСЃС‚СѓРїРµРЅ") Then
         tr.children(6).children(0).checked="true"
         tr.children(7).children(0).style.backgroundColor="yellow"
       Else 
         tr.children(7).children(0).value=tr.children(2).innerHTML
       End If  
-      If (tr.children(5).innerHTML = "не определено") Then 
+      If (tr.children(5).innerHTML = "РЅРµ РѕРїСЂРµРґРµР»РµРЅРѕ") Then 
         tr.children(7).children(0).value = ""
         tr.children(6).children(0).checked=false
       End If
@@ -299,7 +299,7 @@ Sub saveSelect ()
   Set objOutput = document.getElementById("output")
   Logging("saveSelect")
   For Each tr In objOutput.children(0).children(0).children
-  If tr.children(0).innerHTML <>"Имя компьютера" Then  
+  If tr.children(0).innerHTML <>"РРјСЏ РєРѕРјРїСЊСЋС‚РµСЂР°" Then  
     If tr.children(6).children(0).checked=TRUE Then
       Logging("TRUE")
       strComputerName = tr.children(0).innerHTML
@@ -311,28 +311,28 @@ Sub saveSelect ()
       strLocation = tr.children(8).children(0).value
       Logging(strComputerName&"="&strNewDescription)
       If tr.children(7).children(0).style.backgroundColor="yellow" AND strNewDescription <> "" Then
-      ' Изменение описания в AD
+      ' РР·РјРµРЅРµРЅРёРµ РѕРїРёСЃР°РЅРёСЏ РІ AD
         If setDescription2ADcomputer(strComputerDN,strNewDescription) Then
           tr.children(2).innerHTML = strNewDescription
           tr.children(7).children(0).style.backgroundColor="white"
           tr.children(6).children(0).checked=false
-          Logging "saveSelect(Описание и размещениев AD)=Done"
+          Logging "saveSelect(РћРїРёСЃР°РЅРёРµ Рё СЂР°Р·РјРµС‰РµРЅРёРµРІ AD)=Done"
         End If
       End If
       If tr.children(8).children(0).style.backgroundColor="yellow" Then 
-      ' Изменение размещения
+      ' РР·РјРµРЅРµРЅРёРµ СЂР°Р·РјРµС‰РµРЅРёСЏ
         If setLocation2ADcomputer(strComputerDN,strLocation) Then
           tr.children(8).children(0).style.backgroundColor="white"
           tr.children(6).children(0).checked=false
         End If        
       End If
       If strNewDescription <> strComment AND strNewDescription <> ""  Then 
-      ' Изменение комментария в сети 
+      ' РР·РјРµРЅРµРЅРёРµ РєРѕРјРјРµРЅС‚Р°СЂРёСЏ РІ СЃРµС‚Рё 
         If setComment2Computer(strComputerName,strNewDescription) Then
           tr.children(4).innerHTML = strNewDescription
           tr.children(6).children(0).checked=false
           tr.children(7).children(0).style.backgroundColor="white"
-          Logging "saveSelect(Комментарий)=Done"
+          Logging "saveSelect(РљРѕРјРјРµРЅС‚Р°СЂРёР№)=Done"
         End If
       End If     
      End If
@@ -362,7 +362,7 @@ Sub getNetviewList()
         objComment.innerHTML = strComment
         Logging strComputer&"="&strComment
         Set tr = objComment.ParentNode 
-        If tr.children(0).innerHTML <>"Имя компьютера" Then
+        If tr.children(0).innerHTML <>"РРјСЏ РєРѕРјРїСЊСЋС‚РµСЂР°" Then
           If (tr.children(2).innerHTML <> tr.children(3).innerHTML) Then
             tr.children(7).children(0).style.backgroundColor="yellow"
           End If  
@@ -374,8 +374,8 @@ Sub getNetviewList()
   Logging "getNetviewList finished"
 End Sub
 Function dos2win(strText)
-  strDos="ЂЃ‚ѓ„…р†‡€‰Љ‹ЊЌЋЏђ‘’“”•–—™љ›њќћџ ЎўЈ¤Ґс¦§Ё©Є«¬­®Їабвгдежзийклмноп"
-  strWin="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+  strDos="Р‚РѓвЂљС“вЂћвЂ¦СЂвЂ вЂЎв‚¬вЂ°Р‰вЂ№РЉРЊР‹РЏС’вЂвЂ™вЂњвЂќвЂўвЂ“вЂ” в„ўС™вЂєСљСњС›СџВ РЋСћР€В¤ТђСЃВ¦В§РЃВ©Р„В«В¬В­В®Р‡Р°Р±РІРіРґРµР¶Р·РёР№РєР»РјРЅРѕРї"
+  strWin="РђР‘Р’Р“Р”Р•РЃР–Р—РР™РљР›РњРќРћРџР РЎРўРЈР¤РҐР¦Р§РЁР©РЄР«Р¬Р­Р®РЇР°Р±РІРіРґРµС‘Р¶Р·РёР№РєР»РјРЅРѕРїСЂСЃС‚СѓС„С…С†С‡С€С‰СЉС‹СЊСЌСЋСЏ"
   For i=1 To len(strText)
     letterDos = mid(strText,i,1)
     n = InStr(strDos,letterDos)
@@ -477,37 +477,37 @@ td {
 </style>
 </head>
 <body>
-<h1>Ввод описаний и размещения компьютеров</h1>
+<h1>Р’РІРѕРґ РѕРїРёСЃР°РЅРёР№ Рё СЂР°Р·РјРµС‰РµРЅРёСЏ РєРѕРјРїСЊСЋС‚РµСЂРѕРІ</h1>
 <ol>
-  <li>Получить список компьютеров, их описание и размещение из Active Directory. Нажмите <br />
-    <input type="button" value="Получить данные из Active Directory" onclick="vbscript:getComputersList">
+  <li>РџРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє РєРѕРјРїСЊСЋС‚РµСЂРѕРІ, РёС… РѕРїРёСЃР°РЅРёРµ Рё СЂР°Р·РјРµС‰РµРЅРёРµ РёР· Active Directory. РќР°Р¶РјРёС‚Рµ <br />
+    <input type="button" value="РџРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ РёР· Active Directory" onclick="vbscript:getComputersList">
   <div id="output"></div>
   </li>
-  <li>Получить описания компьютеров, отображаемые в сетевом обозрении. Нажмите <br />
-    <input type="button" value="Получить описания из обозревателя сети" onclick="vbscript:getNetViewList"><br />
-    Данные отражают текущее состояние списка компьютеров на обозревателе сети, 
-    в реестре компьютера может быть указано другое описание, которое появится 
-    только после перезагрузки. 
+  <li>РџРѕР»СѓС‡РёС‚СЊ РѕРїРёСЃР°РЅРёСЏ РєРѕРјРїСЊСЋС‚РµСЂРѕРІ, РѕС‚РѕР±СЂР°Р¶Р°РµРјС‹Рµ РІ СЃРµС‚РµРІРѕРј РѕР±РѕР·СЂРµРЅРёРё. РќР°Р¶РјРёС‚Рµ <br />
+    <input type="button" value="РџРѕР»СѓС‡РёС‚СЊ РѕРїРёСЃР°РЅРёСЏ РёР· РѕР±РѕР·СЂРµРІР°С‚РµР»СЏ СЃРµС‚Рё" onclick="vbscript:getNetViewList"><br />
+    Р”Р°РЅРЅС‹Рµ РѕС‚СЂР°Р¶Р°СЋС‚ С‚РµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ СЃРїРёСЃРєР° РєРѕРјРїСЊСЋС‚РµСЂРѕРІ РЅР° РѕР±РѕР·СЂРµРІР°С‚РµР»Рµ СЃРµС‚Рё, 
+    РІ СЂРµРµСЃС‚СЂРµ РєРѕРјРїСЊСЋС‚РµСЂР° РјРѕР¶РµС‚ Р±С‹С‚СЊ СѓРєР°Р·Р°РЅРѕ РґСЂСѓРіРѕРµ РѕРїРёСЃР°РЅРёРµ, РєРѕС‚РѕСЂРѕРµ РїРѕСЏРІРёС‚СЃСЏ 
+    С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РїРµСЂРµР·Р°РіСЂСѓР·РєРё. 
   </li>
-  <li>Получить данные о пользователях, использующих указанные выше компьютеры. 
-    Нажмите <br />
-    <input type="button" value="Получить данные с компьютеров" onclick="vbscript:getUsersFromComps"><br />
-    <span class="attention">В процессе выполнения будут опрошены все компьютеры из списка.
-    Получение данных с каждого потребует времени, в течение которого программа 
-    будет выглядеть зависшей. 
-    Программой пишется журнал работы, который можно просмотреть и понять, 
-    какую операцию в данный момент выполняет программа.</span>
+  <li>РџРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏС…, РёСЃРїРѕР»СЊР·СѓСЋС‰РёС… СѓРєР°Р·Р°РЅРЅС‹Рµ РІС‹С€Рµ РєРѕРјРїСЊСЋС‚РµСЂС‹. 
+    РќР°Р¶РјРёС‚Рµ <br />
+    <input type="button" value="РџРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ СЃ РєРѕРјРїСЊСЋС‚РµСЂРѕРІ" onclick="vbscript:getUsersFromComps"><br />
+    <span class="attention">Р’ РїСЂРѕС†РµСЃСЃРµ РІС‹РїРѕР»РЅРµРЅРёСЏ Р±СѓРґСѓС‚ РѕРїСЂРѕС€РµРЅС‹ РІСЃРµ РєРѕРјРїСЊСЋС‚РµСЂС‹ РёР· СЃРїРёСЃРєР°.
+    РџРѕР»СѓС‡РµРЅРёРµ РґР°РЅРЅС‹С… СЃ РєР°Р¶РґРѕРіРѕ РїРѕС‚СЂРµР±СѓРµС‚ РІСЂРµРјРµРЅРё, РІ С‚РµС‡РµРЅРёРµ РєРѕС‚РѕСЂРѕРіРѕ РїСЂРѕРіСЂР°РјРјР° 
+    Р±СѓРґРµС‚ РІС‹РіР»СЏРґРµС‚СЊ Р·Р°РІРёСЃС€РµР№. 
+    РџСЂРѕРіСЂР°РјРјРѕР№ РїРёС€РµС‚СЃСЏ Р¶СѓСЂРЅР°Р» СЂР°Р±РѕС‚С‹, РєРѕС‚РѕСЂС‹Р№ РјРѕР¶РЅРѕ РїСЂРѕСЃРјРѕС‚СЂРµС‚СЊ Рё РїРѕРЅСЏС‚СЊ, 
+    РєР°РєСѓСЋ РѕРїРµСЂР°С†РёСЋ РІ РґР°РЅРЅС‹Р№ РјРѕРјРµРЅС‚ РІС‹РїРѕР»РЅСЏРµС‚ РїСЂРѕРіСЂР°РјРјР°.</span>
   </li>
-  <li>Выполнить корректировку данных в столбцах таблицы. Ввести описание для каждого компьютера 
-    соответственно имени ответственного пользователя. Ввести номер сетевой розетки,
-    к которой подключен компьютер в формате &quot;кабинет.розетка&quot;, например: <b>320.1к</b>
-    <span class="attention">Обратите внимание - для изменяемых записей чекбоксы 
-    должны быть отмечены галочкой. Для сервера в качестве описания вводится 
-    основная его функция, например <b>Контроллер домена</b></span></li>
-  <li>Сохранить изменения в Active Directory и в реестрах компьютеров. Нажмите<br />
-    <input type="button" value="Записать данные" onclick="vbscript:saveSelect"><br />
-    <span class="attention">Выполнение операции может потребовать некоторого времени, в зависимости от того, 
-    сколько записей отмечено для изменения.</span>
+  <li>Р’С‹РїРѕР»РЅРёС‚СЊ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєСѓ РґР°РЅРЅС‹С… РІ СЃС‚РѕР»Р±С†Р°С… С‚Р°Р±Р»РёС†С‹. Р’РІРµСЃС‚Рё РѕРїРёСЃР°РЅРёРµ РґР»СЏ РєР°Р¶РґРѕРіРѕ РєРѕРјРїСЊСЋС‚РµСЂР° 
+    СЃРѕРѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕ РёРјРµРЅРё РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ. Р’РІРµСЃС‚Рё РЅРѕРјРµСЂ СЃРµС‚РµРІРѕР№ СЂРѕР·РµС‚РєРё,
+    Рє РєРѕС‚РѕСЂРѕР№ РїРѕРґРєР»СЋС‡РµРЅ РєРѕРјРїСЊСЋС‚РµСЂ РІ С„РѕСЂРјР°С‚Рµ &quot;РєР°Р±РёРЅРµС‚.СЂРѕР·РµС‚РєР°&quot;, РЅР°РїСЂРёРјРµСЂ: <b>320.1Рє</b>
+    <span class="attention">РћР±СЂР°С‚РёС‚Рµ РІРЅРёРјР°РЅРёРµ - РґР»СЏ РёР·РјРµРЅСЏРµРјС‹С… Р·Р°РїРёСЃРµР№ С‡РµРєР±РѕРєСЃС‹ 
+    РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РѕС‚РјРµС‡РµРЅС‹ РіР°Р»РѕС‡РєРѕР№. Р”Р»СЏ СЃРµСЂРІРµСЂР° РІ РєР°С‡РµСЃС‚РІРµ РѕРїРёСЃР°РЅРёСЏ РІРІРѕРґРёС‚СЃСЏ 
+    РѕСЃРЅРѕРІРЅР°СЏ РµРіРѕ С„СѓРЅРєС†РёСЏ, РЅР°РїСЂРёРјРµСЂ <b>РљРѕРЅС‚СЂРѕР»Р»РµСЂ РґРѕРјРµРЅР°</b></span></li>
+  <li>РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ РІ Active Directory Рё РІ СЂРµРµСЃС‚СЂР°С… РєРѕРјРїСЊСЋС‚РµСЂРѕРІ. РќР°Р¶РјРёС‚Рµ<br />
+    <input type="button" value="Р—Р°РїРёСЃР°С‚СЊ РґР°РЅРЅС‹Рµ" onclick="vbscript:saveSelect"><br />
+    <span class="attention">Р’С‹РїРѕР»РЅРµРЅРёРµ РѕРїРµСЂР°С†РёРё РјРѕР¶РµС‚ РїРѕС‚СЂРµР±РѕРІР°С‚СЊ РЅРµРєРѕС‚РѕСЂРѕРіРѕ РІСЂРµРјРµРЅРё, РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РѕРіРѕ, 
+    СЃРєРѕР»СЊРєРѕ Р·Р°РїРёСЃРµР№ РѕС‚РјРµС‡РµРЅРѕ РґР»СЏ РёР·РјРµРЅРµРЅРёСЏ.</span>
   </li>
 </ol>
 <textarea id="log">

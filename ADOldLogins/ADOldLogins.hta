@@ -7,8 +7,8 @@
 '*  Author:         Andrey Grevtsov 
 '*                  http://andrey.grevtsov.ru
 '*
-'*  Description:    Приложение позволяет упростить удаление   
-'*                  устаревших учётных записей компьютеров из
+'*  Description:    РџСЂРёР»РѕР¶РµРЅРёРµ РїРѕР·РІРѕР»СЏРµС‚ СѓРїСЂРѕСЃС‚РёС‚СЊ СѓРґР°Р»РµРЅРёРµ   
+'*                  СѓСЃС‚Р°СЂРµРІС€РёС… СѓС‡С‘С‚РЅС‹С… Р·Р°РїРёСЃРµР№ РєРѕРјРїСЊСЋС‚РµСЂРѕРІ РёР·
 '*                  Active Directory
 '*  Copyleft (C)    2006 Andrey Grevtsov
 '*
@@ -17,8 +17,8 @@
 '********************************************************************-->
 <head>
 <meta http-equiv="MSThemeCompatible" content="yes">
-<title>ADOldLogins - Удаление устаревших учётных записей компьютеров из Active Directory</title>
-<meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<title>ADOldLogins - РЈРґР°Р»РµРЅРёРµ СѓСЃС‚Р°СЂРµРІС€РёС… СѓС‡С‘С‚РЅС‹С… Р·Р°РїРёСЃРµР№ РєРѕРјРїСЊСЋС‚РµСЂРѕРІ РёР· Active Directory</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <HTA:application
   id="objADOldLogins"
   applicationname="ADOldLogins"
@@ -78,12 +78,12 @@ Sub getComputersList()
   out1 = "<table>"
   out1 = out1&"<tr class='thead'>"
   out1 = out1&"<td class='check'></td>"
-  out1 = out1&"<td class='name'>Имя компьютера</td>"
+  out1 = out1&"<td class='name'>РРјСЏ РєРѕРјРїСЊСЋС‚РµСЂР°</td>"
   out1 = out1&"<td class='DN'>distiguishedName</td>"
-  out1 = out1&"<td class='description'>Описание компьютера в AD</td>"
-  out1 = out1&"<td class='createtime'>Дата создания учётной записи</td>"
-  out1 = out1&"<td class='lastlogon'>Дата последнего подключения к домену</td>" 
-  out1=out1&"<td class='location'>Размещение</td>"   
+  out1 = out1&"<td class='description'>РћРїРёСЃР°РЅРёРµ РєРѕРјРїСЊСЋС‚РµСЂР° РІ AD</td>"
+  out1 = out1&"<td class='createtime'>Р”Р°С‚Р° СЃРѕР·РґР°РЅРёСЏ СѓС‡С‘С‚РЅРѕР№ Р·Р°РїРёСЃРё</td>"
+  out1 = out1&"<td class='lastlogon'>Р”Р°С‚Р° РїРѕСЃР»РµРґРЅРµРіРѕ РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє РґРѕРјРµРЅСѓ</td>" 
+  out1=out1&"<td class='location'>Р Р°Р·РјРµС‰РµРЅРёРµ</td>"   
   out1=out1&"</tr>" &vbcr
   Do Until objRecordSet.EOF
     strNameComp = objRecordSet.Fields("name").Value
@@ -126,7 +126,7 @@ Sub getComputersList()
     j=j+1
   Loop
   objOutput.innerHtml = out1&"</table>" 
-  Logging "Получен список компьютеров с контроллера домена: "& CStr(j-1)
+  Logging "РџРѕР»СѓС‡РµРЅ СЃРїРёСЃРѕРє РєРѕРјРїСЊСЋС‚РµСЂРѕРІ СЃ РєРѕРЅС‚СЂРѕР»Р»РµСЂР° РґРѕРјРµРЅР°: "& CStr(j-1)
 '  Logging(objOutput.innerHTML)
 End Sub
 
@@ -147,7 +147,7 @@ Sub applyChanges()
   intSuccessNum = 0
   intFailureNum = 0
   For Each tr In objOutput.children(0).children(0).children
-  If tr.children(1).innerHTML <>"Имя компьютера" AND len(tr.children(0).innerHTML)>3Then  
+  If tr.children(1).innerHTML <>"РРјСЏ РєРѕРјРїСЊСЋС‚РµСЂР°" AND len(tr.children(0).innerHTML)>3Then  
     If tr.children(0).children(0).checked=TRUE Then
 '      Logging("TRUE")
       strComputerName = tr.children(1).innerHTML
@@ -156,25 +156,25 @@ Sub applyChanges()
         tr.children(0).innerHTML=""
 '        tr.children(1).innerHTML=""
 '        tr.children(2).innerHTML=""
-        tr.children(3).innerHTML="<i>Запись удалена</i>"
+        tr.children(3).innerHTML="<i>Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°</i>"
         tr.children(4).innerHTML=""
         tr.children(5).innerHTML=""
         tr.children(6).innerHTML=""
-        Logging "Успешно удалёна учётная запись компьютера: " &strComputerName&" ("&strComputerDn&")"
+        Logging "РЈСЃРїРµС€РЅРѕ СѓРґР°Р»С‘РЅР° СѓС‡С‘С‚РЅР°СЏ Р·Р°РїРёСЃСЊ РєРѕРјРїСЊСЋС‚РµСЂР°: " &strComputerName&" ("&strComputerDn&")"
         intSuccessNum = intSuccessNum+1 
       Else
-        Logging "Не удалось удалить учётную запись компьютера: " &strComputerName&" ("&strComputerDn&")"
+        Logging "РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ СѓС‡С‘С‚РЅСѓСЋ Р·Р°РїРёСЃСЊ РєРѕРјРїСЊСЋС‚РµСЂР°: " &strComputerName&" ("&strComputerDn&")"
         intFailureNum = intFailureNum+1      
       End If
     End If
   End If
   Next
-  Logging "Удалено: " & CStr(intSuccessNum) & ". " & "Не удалось удалить: " & CStr(intFailureNum) & "."
+  Logging "РЈРґР°Р»РµРЅРѕ: " & CStr(intSuccessNum) & ". " & "РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ: " & CStr(intFailureNum) & "."
 End Sub
 
 Function convertLargeInteger2Date(objLastLogon)
-' В AD время последнего входа в систему хранится в виде объеста LargeInteger
-' в наносекундах с  01/01/1601
+' Р’ AD РІСЂРµРјСЏ РїРѕСЃР»РµРґРЅРµРіРѕ РІС…РѕРґР° РІ СЃРёСЃС‚РµРјСѓ С…СЂР°РЅРёС‚СЃСЏ РІ РІРёРґРµ РѕР±СЉРµСЃС‚Р° LargeInteger
+' РІ РЅР°РЅРѕСЃРµРєСѓРЅРґР°С… СЃ  01/01/1601
   If isObject(objLastLogon) Then
     intLastLogonTime = objLastLogon.HighPart * (2^32) + objLastLogon.LowPart 
     intLastLogonTime = intLastLogonTime / (60 * 10000000)
@@ -193,10 +193,10 @@ Function convertGMT2MSK(strDateTime)
 End Function
 
 Function isMoreMonthNotLogon (strDateTime,intMonth)
-'  Logging "Сегодня:" &DateValue(Now)
-'  Logging "Последний вход:" & DateValue(strDateTime)
-'  Logging "Разница в месяцах: "&DateDiff("m",DateValue(strDateTime),Now)
-'  Logging("Допустимо:"&CStr(intMonth))
+'  Logging "РЎРµРіРѕРґРЅСЏ:" &DateValue(Now)
+'  Logging "РџРѕСЃР»РµРґРЅРёР№ РІС…РѕРґ:" & DateValue(strDateTime)
+'  Logging "Р Р°Р·РЅРёС†Р° РІ РјРµСЃСЏС†Р°С…: "&DateDiff("m",DateValue(strDateTime),Now)
+'  Logging("Р”РѕРїСѓСЃС‚РёРјРѕ:"&CStr(intMonth))
   If Abs(DateDiff("m",Now,DateValue(strDateTime))) > intMonth Then 
     isMoreMonthNotLogon = True
       Logging("True")
@@ -281,18 +281,18 @@ td {
 </style>
 </head>
 <body>
-<h1>Удаление устаревших учётных записей компьютеров</h1>
+<h1>РЈРґР°Р»РµРЅРёРµ СѓСЃС‚Р°СЂРµРІС€РёС… СѓС‡С‘С‚РЅС‹С… Р·Р°РїРёСЃРµР№ РєРѕРјРїСЊСЋС‚РµСЂРѕРІ</h1>
 <ol>
-  <li>Получить список компьютеров, их описание, размещение и дату последнего 
-    входа в Active Directory. Автоматически помечаются для удаления записи 
-    компьютеров, которые не подключались к домену более 60 дней. Нажмите <br />
-    <input type="button" value="Получить данные из Active Directory" onclick="vbscript:getComputersList">
+  <li>РџРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє РєРѕРјРїСЊСЋС‚РµСЂРѕРІ, РёС… РѕРїРёСЃР°РЅРёРµ, СЂР°Р·РјРµС‰РµРЅРёРµ Рё РґР°С‚Сѓ РїРѕСЃР»РµРґРЅРµРіРѕ 
+    РІС…РѕРґР° РІ Active Directory. РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРѕРјРµС‡Р°СЋС‚СЃСЏ РґР»СЏ СѓРґР°Р»РµРЅРёСЏ Р·Р°РїРёСЃРё 
+    РєРѕРјРїСЊСЋС‚РµСЂРѕРІ, РєРѕС‚РѕСЂС‹Рµ РЅРµ РїРѕРґРєР»СЋС‡Р°Р»РёСЃСЊ Рє РґРѕРјРµРЅСѓ Р±РѕР»РµРµ 60 РґРЅРµР№. РќР°Р¶РјРёС‚Рµ <br />
+    <input type="button" value="РџРѕР»СѓС‡РёС‚СЊ РґР°РЅРЅС‹Рµ РёР· Active Directory" onclick="vbscript:getComputersList">
   <div id="output"></div>
   </li>
-  <li>Удалить выделенные компьютеры из Active Directory. Нажмите<br />
-    <input type="button" value="УДАЛИТЬ выделенные" onclick="vbscript:applyChanges"><br />
-    <span class="attention">Операция необратима! Будьте уверены, что удаляется 
-    неиспользуемая учётная запись.</span>
+  <li>РЈРґР°Р»РёС‚СЊ РІС‹РґРµР»РµРЅРЅС‹Рµ РєРѕРјРїСЊСЋС‚РµСЂС‹ РёР· Active Directory. РќР°Р¶РјРёС‚Рµ<br />
+    <input type="button" value="РЈР”РђР›РРўР¬ РІС‹РґРµР»РµРЅРЅС‹Рµ" onclick="vbscript:applyChanges"><br />
+    <span class="attention">РћРїРµСЂР°С†РёСЏ РЅРµРѕР±СЂР°С‚РёРјР°! Р‘СѓРґСЊС‚Рµ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ СѓРґР°Р»СЏРµС‚СЃСЏ 
+    РЅРµРёСЃРїРѕР»СЊР·СѓРµРјР°СЏ СѓС‡С‘С‚РЅР°СЏ Р·Р°РїРёСЃСЊ.</span>
   </li>
 </ol>
 <textarea id="log">
